@@ -920,7 +920,6 @@ class BGPPeerAddressFamilyForm(BGPSettingMixin, TenancyForm, PrimaryModelForm):
         selected_objects = [
             field for field in ('peer', 'peer_group') if self.cleaned_data[field]
         ]
-
         if len(selected_objects) > 1:
             raise forms.ValidationError(
                 {
@@ -929,10 +928,11 @@ class BGPPeerAddressFamilyForm(BGPSettingMixin, TenancyForm, PrimaryModelForm):
                     )
                 }
             )
-
-        if not selected_objects:
+        elif selected_objects:
+            self.instance.assigned_object = self.cleaned_data[selected_objects[0]]
+        else:
             raise ValidationError(
-                _('A BGP Peer Address Family must specify a Peer or Peer Group.')
+                _('A BGP Peer Address Family must specify an Peer or Peer Group.')
             )
 
         filter = {
@@ -940,13 +940,7 @@ class BGPPeerAddressFamilyForm(BGPSettingMixin, TenancyForm, PrimaryModelForm):
             'address_family': self.cleaned_data.get('address_family'),
         }
         if (
-            self.Meta.model.objects.filter(
-                assigned_object_type=ContentType.objects.get_for_model(
-                    self.instance.assigned_object
-                ).pk,
-                assigned_object_id=self.instance.assigned_object.pk,
-                address_family=self.cleaned_data.get('address_family'),
-            )
+            self.Meta.model.objects.filter(**filter)
             .exclude(pk=self.instance.pk)
             .exists()
         ):
